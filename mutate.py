@@ -18,7 +18,7 @@ random.seed(current_time)
 class MutantGen(ast.NodeTransformer):
     print("test1")
     # Swap Comparison operators
-    def swapComp(self, node):
+    def visit_Compare(self, node):
         print("test2")
         for i, comparator in enumerate(node.comparators):
             if isinstance(node.ops[i], ast.Eq):
@@ -35,22 +35,22 @@ class MutantGen(ast.NodeTransformer):
                 node.ops[i] = ast.Lt()
             return node
 
-    def swapBinOp(self, node):
+    def visit_BinOp(self, node):
         print("test3")
+        self.generic_visit(node)
         # Swap the binary operator
-        if isinstance(node, ast.BinOp):
-            if isinstance(node.op, ast.Add):
-                node.op = ast.Sub()
-            elif isinstance(node.op, ast.Sub):
-                node.op = ast.Add()
-            elif isinstance(node.op, ast.Mult):
-                node.op = ast.Div()
-            elif isinstance(node.op, ast.Div):
-                node.op = ast.Mult()
-            return node
+        if isinstance(node.op, ast.Add):
+            node.op = ast.Sub()
+        elif isinstance(node.op, ast.Sub):
+            node.op = ast.Add()
+        elif isinstance(node.op, ast.Mult):
+            node.op = ast.Div()
+        elif isinstance(node.op, ast.Div):
+            node.op = ast.Mult()
+        return node
     
     #Delete assignment 25% of the time
-    def delAssign(self, node):
+    def delete_Assignment(self, node):
         print("test4")
         if isinstance(node, ast.Assign) and random.random() < 0.25:
             return ast.Delete(targets=[ast.Name(id=t.id, ctx=ast.Del()) for t in node.targets])
@@ -92,14 +92,11 @@ def main():
         sourceTree = temp
 
         # Apply mutation transformations
-        #mutantTree = gen.visit(sourceTree)
-        mutantTree = gen.swapBinOp(sourceTree)
-        #mutantTree = gen.delAssign(sourceTree)
+        mutantTree = gen.visit(sourceTree)
 
-
-        #mutantTreeFix = ast.fix_missing_locations(mutantTree)
+        mutantTreeFix = ast.fix_missing_locations(mutantTree)
         # Transform mutant AST to source
-        mutantTreeSource = astor.to_source(mutantTree)
+        mutantTreeSource = astor.to_source(mutantTreeFix)
 
         # Write mutated source to a file
         with open((str(i) + ".py"), "w") as f:
