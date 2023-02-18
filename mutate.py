@@ -20,29 +20,34 @@ class MutantGen(ast.NodeTransformer):
     # Swap Comparison operators
     def swapComp(self, node):
         print("test2")
-        for i, comp in enumerate(node.ops):
-            if random.random() < 0.5:
-                # Change == to !=
-                if comp == ast.Eq:
-                    node.ops[i] = ast.NotEq
-                # Change >= to <
-                elif comp == ast.GtE:
-                    node.ops[i] = ast.Lt
-                # Change <= to >
-                elif comp == ast.LtE:
-                    node.ops[i] = ast.Gt
+        for i, comparator in enumerate(node.comparators):
+            if isinstance(node.ops[i], ast.Eq):
+                node.ops[i] = ast.NotEq()
+            elif isinstance(node.ops[i], ast.NotEq):
+                node.ops[i] = ast.Eq()
+            elif isinstance(node.ops[i], ast.Lt):
+                node.ops[i] = ast.GtE()
+            elif isinstance(node.ops[i], ast.LtE):
+                node.ops[i] = ast.Gt()
+            elif isinstance(node.ops[i], ast.Gt):
+                node.ops[i] = ast.LtE()
+            elif isinstance(node.ops[i], ast.GtE):
+                node.ops[i] = ast.Lt()
+            return node
 
-    # Swap Binary Operators
     def swapBinOp(self, node):
         print("test3")
-        for i, op in enumerate(node.op):
-            if random.random() < 0.5:
-                #swap + with -
-                if op == ast.Add:
-                    node.op[i] = ast.Sub
-                #swap + with -
-                if op == ast.Sub:
-                    node.op[i] = ast.Add
+        # Swap the binary operator
+        if isinstance(node, ast.BinOp):
+            if isinstance(node.op, ast.Add):
+                node.op = ast.Sub()
+            elif isinstance(node.op, ast.Sub):
+                node.op = ast.Add()
+            elif isinstance(node.op, ast.Mult):
+                node.op = ast.Div()
+            elif isinstance(node.op, ast.Div):
+                node.op = ast.Mult()
+            return node
     
     #Delete assignment 25% of the time
     def delAssign(self, node):
@@ -87,14 +92,14 @@ def main():
         sourceTree = temp
 
         # Apply mutation transformations
-        mutantTree = gen.visit(sourceTree)
-        #mutantTree = gen.delAssign(gen.swapComp(gen.swapBinOp(sourceTree)))
-        #mutantTree = gen.delAssign(gen.swapBinOp(gen.swapComp(sourceTree)))
+        #mutantTree = gen.visit(sourceTree)
+        mutantTree = gen.swapBinOp(sourceTree)
+        #mutantTree = gen.delAssign(sourceTree)
 
 
-        mutantTreeFix = ast.fix_missing_locations(mutantTree)
+        #mutantTreeFix = ast.fix_missing_locations(mutantTree)
         # Transform mutant AST to source
-        mutantTreeSource = astor.to_source(mutantTreeFix)
+        mutantTreeSource = astor.to_source(mutantTree)
 
         # Write mutated source to a file
         with open((str(i) + ".py"), "w") as f:
