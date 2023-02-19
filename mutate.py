@@ -12,50 +12,87 @@ current_time = int(time.time())
 #print ("Current time", current_time)
 
 # Set the seed for the random number generator using the current time
-random.seed(current_time)
+
 
 
 class MutantGen(ast.NodeTransformer):
-    print("test1")
-    # Swap Comparison operators
-    def visit_Compare(self, node):
-        print("test2")
-        for i, comparator in enumerate(node.comparators):
-            if isinstance(node.ops[i], ast.Eq):
-                node.ops[i] = ast.NotEq()
-            elif isinstance(node.ops[i], ast.NotEq):
-                node.ops[i] = ast.Eq()
-            elif isinstance(node.ops[i], ast.Lt):
-                node.ops[i] = ast.GtE()
-            elif isinstance(node.ops[i], ast.LtE):
-                node.ops[i] = ast.Gt()
-            elif isinstance(node.ops[i], ast.Gt):
-                node.ops[i] = ast.LtE()
-            elif isinstance(node.ops[i], ast.GtE):
-                node.ops[i] = ast.Lt()
-            return node
+    def __init__(self, value):
+        self.val = value
 
-    def visit_BinOp(self, node):
-        print("test3")
-        self.generic_visit(node)
-        # Swap the binary operator
-        if isinstance(node.op, ast.Add):
-            node.op = ast.Sub()
-        elif isinstance(node.op, ast.Sub):
-            node.op = ast.Add()
-        elif isinstance(node.op, ast.Mult):
-            node.op = ast.Div()
-        elif isinstance(node.op, ast.Div):
-            node.op = ast.Mult()
+    def visit(self, node):
+        # randomly mutate the node with a small probability
+        val = (self.val * .007) + .01
+        if random.random() < val:
+            node = self.mutate_node(node)
+        return self.generic_visit(node)
+
+    def mutate_node(self, node):
+        # choose a random mutation to apply to the node
+        mutations = [
+            self.deleteAssign,
+            self.binOp,
+            self.compare,
+            self.returnSwap,
+            
+        ]
+        mutation = random.choice(mutations)
+        return mutation(node)
+    
+    # Swap Comparison operators
+    def compare(self, node):
+        if isinstance(node, ast.Compare):
+            self.generic_visit(node)
+            if isinstance(node.ops, ast.Eq):
+                print("test1")
+                node.ops = ast.NotEq()
+            if isinstance(node.ops, ast.NotEq):
+                print("test1")
+                node.ops = ast.Eq()
+            if isinstance(node.ops, ast.Lt):
+                print("test1")
+                node.ops = ast.GtE()
+            if isinstance(node.ops, ast.Gt):
+                print("test1")
+                node.ops = ast.LtE()
+            if isinstance(node.ops, ast.LtE):
+                print("test1")
+                node.ops = ast.Gt()
+            if isinstance(node.ops, ast.GtE):
+                print("test1")
+                node.ops = ast.Lt()
+        return node
+                               
+    def binOp(self, node):
+        if isinstance(node, ast.BinOp):
+            self.generic_visit(node)                
+            if isinstance(node.op, ast.Add):
+                print("test2")
+                node.op = ast.Sub()
+            elif isinstance(node.op, ast.Sub):
+                print("test2")
+                node.op = ast.Add()
+            elif isinstance(node.op, ast.Mult):
+                print("test2")
+                node.op = ast.Div()
+            elif isinstance(node.op, ast.Div):
+                print("test2")
+                node.op = ast.Mult()
         return node
     
     #Delete assignment 25% of the time
-    def delete_Assignment(self, node):
-        print("test4")
-        if isinstance(node, ast.Assign) and random.random() < 0.25:
-            return ast.Delete(targets=[ast.Name(id=t.id, ctx=ast.Del()) for t in node.targets])
+    def deleteAssign(self, node):
+        if isinstance(node, ast.Assign):
+            print("test3")
+            return ast.Expr(value=None)
         return node
-
+    
+    def returnSwap(self, node):
+        if isinstance(node, ast.Return):
+            self.generic_visit(node)
+            if isinstance(node.value, ast.Num):
+                print("test4")
+                node.value.n = 481
+        return node
 
 
 def main():
@@ -86,11 +123,12 @@ def main():
     numMut = int(numMut)
 
     # Initialize mutant generator
-    gen = MutantGen()
+    
     for i in range(numMut):
+        random.seed(current_time)
         # Reset SourceTree to unmodified source
         sourceTree = temp
-
+        gen = MutantGen(i)
         # Apply mutation transformations
         mutantTree = gen.visit(sourceTree)
 
